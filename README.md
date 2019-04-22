@@ -1,0 +1,2 @@
+# jobman
+Minimal job manager
