@@ -55,7 +55,7 @@ class Job(object):
     
 class JobMan(object):
     jobs = []
-    delay = 1
+    delay = 5
     maxjobs = 0
     filenames = []
     _njobs = 0
@@ -82,7 +82,7 @@ or from standard input, if no file argument is specified. Options:
 
 -d D | Poll proocesses every D seconds (default: {}).
 -m M | Run at most M concurrent processes (default: no limit).
-        -l   | Enable logging (to standard error).
+-l   | Enable logging (to standard error).
 
 Each command line can be preceded by one or more '+' characters (up to 20),
 indicating that the corresponding job should be executed after a previous 
