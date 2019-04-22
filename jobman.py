@@ -7,8 +7,19 @@ import subprocess as sp
 
 # Globals
 
-PROCESS_STATES = ["ready", "running", "done"]
+PROCESS_STATES = ["held", "ready", "running", "done"]
 
+# Utils
+
+def countPlus(s):
+    """Return the number of + characters at the beginning of string `s'."""
+    np = 0
+    for c in s:
+        if c == '+':
+            np += 1
+        else:
+            return np
+        
 class Job(object):
     name = ""
     proc = None
@@ -16,15 +27,17 @@ class Job(object):
     cmdline = ""
     status = None
     retcode = 0
-
-    def __init__(self, cmdline, name=None):
+    dependents = []
+    
+    def __init__(self, cmdline, name=None, status="ready"):
         self.cmdline = cmdline
         if name:
             self.name = name
         else:
             self.name = cmdline.split(" ")[0]
         self.retcode = 0
-        self.status = "ready"
+        self.status = status
+        self.dependents = []
 
     def start(self):
         self.proc = sp.Popen(self.cmdline, shell=True)
@@ -69,7 +82,20 @@ or from standard input, if no file argument is specified. Options:
 
 -d D | Poll proocesses every D seconds (default: {}).
 -m M | Run at most M concurrent processes (default: no limit).
--l   | Enable logging (to stderr).
+        -l   | Enable logging (to standard error).
+
+Each command line can be preceded by one or more '+' characters (up to 20),
+indicating that the corresponding job should be executed after a previous 
+one has terminated. For example, given the following commands:
+
+cmd1
++cmd2
+++cmd3
+cmd4
++cmd5
+
+cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
+cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
 
 When all jobs are terminated, the program writes two integer numbers to 
 standard output, separated by a tab: the total number of jobs executed,
@@ -82,6 +108,8 @@ $ jobman jobs.txt
 3 2
 $ echo $?
 3
+
+(c) 2019, Alberto Riva.
 
 """.format(self.delay))
         return False
@@ -128,12 +156,35 @@ $ echo $?
             self.initFromStream(f)
 
     def initFromStream(self, f):
+        stack = [None]*20       # Can we have more than 20-deep dependencies?
         for line in f:
             line = line.rstrip()
             if line:
-                self.addJob(Job(line))
+                if line[0] == '#':
+                    continue
+                nplus = countPlus(line)
+                line = line[nplus:]
+                job = Job(line)
+                self.addJob(job)
+                if nplus > 0:
+                    job.status = "held"
+                    parent = stack[nplus-1]
+                    parent.dependents.append(job)
+                stack[nplus] = job
+
         self.log("{} jobs defined.", self._njobs)
-        
+
+    def showJobs(self):
+        for j in self.jobs:
+            if j.status != "held":
+                self.showJob(j, 0)
+
+    def showJob(self, job, ind):
+        sys.stdout.write("+"*ind + job.cmdline + " (" + job.status + ")\n")
+        ind += 1
+        for dep in job.dependents:
+            self.showJob(dep, ind)
+            
     def hasRoom(self):
         """Return True if there's room to start a new job."""
         return self.maxjobs == 0 or self._nrunning < self.maxjobs
@@ -152,6 +203,9 @@ $ echo $?
                     self._nrunning += -1
                     self._ndone += 1
                     self.log("Jobs running: {}", self._nrunning)
+                    for dep in j.dependents:
+                        dep.status = "ready"
+                        self.log("Job #{} now ready.", dep.name)
 
             # Check if we have room to start new jobs and
             # that we have new jobs that can be started
@@ -193,6 +247,7 @@ if __name__ == "__main__":
     JM = JobMan()
     if JM.parseArgs(args):
         JM.initialize()
+        # JM.showJobs()
         JM.run()
         JM.report()
     
