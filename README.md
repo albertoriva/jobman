@@ -17,13 +17,14 @@ Option     | Meaning
 -h, --help | Print help message
 -d D       | Poll processes every D seconds (default: 5).
 -m M       | At most M jobs can run concurrently (default: no limit).
+-v         | Display job map while running (see below).
 -l         | Enable logging (to standard error).
 
 ## Dependent jobs
 
 Each command line can be preceded by one or more '+' characters (up to 20),
 indicating that the corresponding job should be executed after a previous 
-one has terminated. For example, given the following commands:
+one (its parent) has terminated. For example, given the following commands:
 
 ```
 cmd1
@@ -35,6 +36,23 @@ cmd4
 
 cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
 cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
+
+## Job map
+
+If -v is specified, the program will print a string showing the state of
+all jobs to standard error. Each job is represented by a single character,
+and the characters for all jobs are printed consecutively, in order, on a 
+single line. The string is printed only when the status of at least one job
+changes. The characters used in the string are are:
+
+Char | Meaning
+-----|--------
+. | job ready to run
+w | dependent job waiting for its parent to complete
+R | job running
+* | job completed with return code 0
+? | job completed with non-zero return code
+
 
 ## Return values
 

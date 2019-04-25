@@ -7,7 +7,7 @@ import subprocess as sp
 
 # Globals
 
-PROCESS_STATES = ["held", "ready", "running", "done"]
+PROCESS_SYM = {"held": 'w', "ready": '.', "running": 'R', "done": '*', "nonzero": '?'}
 
 # Utils
 
@@ -49,19 +49,24 @@ class Job(object):
         r = self.proc.poll()
         if r is None:
             return False
-        self.status = "done"
         self.retcode = r
+        if r == 0:
+            self.status = "done"
+        else:
+            self.status = "nonzero"
         return True
     
 class JobMan(object):
     jobs = []
     delay = 5
     maxjobs = 0
+    jobmap = False
     filenames = []
     _njobs = 0
     _nrunning = 0
     _ndone = 0
     _log = False
+    _prevmap = ""
     
     def __init__(self, maxjobs=0, delay=1):
         self.jobs = []
@@ -82,6 +87,7 @@ or from standard input, if no file argument is specified. Options:
 
 -d D | Poll proocesses every D seconds (default: {}).
 -m M | Run at most M concurrent processes (default: no limit).
+-v   | Display job map while running (see below).
 -l   | Enable logging (to standard error).
 
 Each command line can be preceded by one or more '+' characters (up to 20),
@@ -96,6 +102,18 @@ cmd4
 
 cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
 cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
+
+If -v is specified, the program will print a string showing the state of
+all jobs to standard error. Each job is represented by a single character,
+and the characters for all jobs are printed consecutively, in order, on a 
+single line. The string is printed only when the status of at least one job
+changes. The characters used in the string are:
+
+. = job ready to run
+w = dependent job waiting for its parent to complete
+R = job running
+* = job completed with return code 0
+? = job completed with non-zero return code
 
 When all jobs are terminated, the program writes two integer numbers to 
 standard output, separated by a tab: the total number of jobs executed,
@@ -127,6 +145,8 @@ $ echo $?
                 prev = ""
             elif a == "-l":
                 self._log = True
+            elif a == "-v":
+                self.jobmap = True
             elif a in ["-d", "-m"]:
                 prev = a
             else:
@@ -174,6 +194,9 @@ $ echo $?
 
         self.log("{} jobs defined.", self._njobs)
 
+    def jobstring(self):
+        return "".join([PROCESS_SYM[j.status] for j in self.jobs])
+
     def showJobs(self):
         for j in self.jobs:
             if j.status != "held":
@@ -214,6 +237,12 @@ $ echo $?
                     self.startJob(j)
                     self.log("Job #{} started.", j.name)
                     self.log("Jobs running: {}", self._nrunning)
+
+            if self.jobmap:
+                jmap = self.jobstring()
+                if jmap != self._prevmap:
+                    sys.stderr.write(jmap + "\n")
+                    self._prevmap = jmap
                     
             if self._ndone == self._njobs:
                 self.log("All jobs terminated.")
