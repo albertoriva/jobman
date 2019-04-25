@@ -17,7 +17,7 @@ Option     | Meaning
 -h, --help | Print help message
 -d D       | Poll processes every D seconds (default: 5).
 -m M       | At most M jobs can run concurrently (default: no limit).
--v         | Display job map while running (see below).
+-q         | Do not display job map while running (see below).
 -l         | Enable logging (to standard error).
 
 ## Dependent jobs
@@ -39,10 +39,10 @@ cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
 
 ## Job map
 
-If -v is specified, the program will print a string showing the state of
-all jobs to standard error. Each job is represented by a single character,
-and the characters for all jobs are printed consecutively, in order, on a 
-single line. The string is printed only when the status of at least one job
+While running, the program will print a string showing the state of all jobs
+to standard error (unless -q is specified). Each job is represented by a single
+character, and the characters for all jobs are printed consecutively, in order,
+on a single line. The string is printed only when the status of at least one job
 changes. The characters used in the string are are:
 
 Char | Meaning
@@ -56,16 +56,16 @@ Char | Meaning
 
 ## Return values
 
-When all jobs are terminated, the program writes two integer numbers to 
-standard output, separated by a tab: the total number of jobs executed,
-and the number of jobs that returned an exit status of 0. The return
-status of the jobman process is the highest exit status returned by any
-of the jobs. For example, if the program executes three jobs, one of 
-which returns an exit status of 3, then: 
+When all jobs are terminated, the program writes three numbers to standard
+output, separated by a tab: the total number of jobs executed, the number
+of jobs that returned an exit status of 0, and the total elapsed time in
+seconds. The return status of the jobman process is the highest exit status
+returned by any of the jobs. For example, if the program executes three jobs,
+one of which returns an exit status of 3, then: 
 
 ```bash
 $ jobman jobs.txt
-3 2
+3    2    123.45
 $ echo $?
 3
 ```

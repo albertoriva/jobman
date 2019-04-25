@@ -4,6 +4,7 @@ import sys
 import time
 import os.path
 import subprocess as sp
+from datetime import datetime
 
 # Globals
 
@@ -60,7 +61,7 @@ class JobMan(object):
     jobs = []
     delay = 5
     maxjobs = 0
-    jobmap = False
+    jobmap = True
     filenames = []
     _njobs = 0
     _nrunning = 0
@@ -87,7 +88,7 @@ or from standard input, if no file argument is specified. Options:
 
  -d D | Poll proocesses every D seconds (default: {}).
  -m M | Run at most M concurrent processes (default: no limit).
- -v   | Display job map while running (see below).
+ -q   | Do not display job map while running (see below).
  -l   | Enable logging (to standard error).
 
 Each command line can be preceded by one or more '+' characters (up to 20),
@@ -103,10 +104,10 @@ cmd4
 cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
 cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
 
-If -v is specified, the program will print a string showing the state of
-all jobs to standard error. Each job is represented by a single character,
-and the characters for all jobs are printed consecutively, in order, on a 
-single line. The string is printed only when the status of at least one job
+While running, the program will print a string showing the state of all jobs 
+to standard error (unless -q is specified). Each job is represented by a single 
+character, and the characters for all jobs are printed consecutively, in order, 
+on a single line. The string is printed only when the status of at least one job
 changes. The characters used in the string are:
 
  . = job ready to run
@@ -115,15 +116,15 @@ changes. The characters used in the string are:
  * = job completed with return code 0
  ? = job completed with non-zero return code
 
-When all jobs are terminated, the program writes two integer numbers to 
-standard output, separated by a tab: the total number of jobs executed,
-and the number of jobs that returned an exit status of 0. The return
-status of the jobman process is the highest exit status returned by any
-of the jobs. For example, if the program executes three jobs, one of 
-which returns an exit status of 3, then: 
+When all jobs are terminated, the program writes three numbers to standard 
+output, separated by a tab: the total number of jobs executed, the number 
+of jobs that returned an exit status of 0, and the total elapsed time in 
+seconds. The return status of the jobman process is the highest exit status 
+returned by any of the jobs. For example, if the program executes three jobs, 
+one of which returns an exit status of 3, then: 
 
 $ jobman jobs.txt
-3 2
+3    2    123.45
 $ echo $?
 3
 
@@ -217,6 +218,7 @@ $ echo $?
         self._nrunning += 1
         
     def run(self):
+        self._start_time = datetime.now()
         while True:
             # Check if any running jobs are done
             for j in self.jobs:
@@ -249,7 +251,8 @@ $ echo $?
                 break
 
             time.sleep(self.delay)
-
+        self._end_time = datetime.now()
+        
     def report(self):
         nzero = 0
         maxret = 0
@@ -258,8 +261,8 @@ $ echo $?
                 nzero += 1
             elif j.retcode > maxret:
                 maxret = j.retcode
-
-        sys.stdout.write("{}\t{}\n".format(self._njobs, nzero))
+        secs = (self._end_time - self._start_time).total_seconds()
+        sys.stdout.write("{}\t{}\t{}\n".format(self._njobs, nzero, secs))
         sys.exit(maxret)
         
 def test():
