@@ -85,10 +85,10 @@ This program executes the specified subprocesses, waiting for them to
 terminate. The commands to be executed can be read from one or more files, 
 or from standard input, if no file argument is specified. Options:
 
--d D | Poll proocesses every D seconds (default: {}).
--m M | Run at most M concurrent processes (default: no limit).
--v   | Display job map while running (see below).
--l   | Enable logging (to standard error).
+ -d D | Poll proocesses every D seconds (default: {}).
+ -m M | Run at most M concurrent processes (default: no limit).
+ -v   | Display job map while running (see below).
+ -l   | Enable logging (to standard error).
 
 Each command line can be preceded by one or more '+' characters (up to 20),
 indicating that the corresponding job should be executed after a previous 
@@ -109,11 +109,11 @@ and the characters for all jobs are printed consecutively, in order, on a
 single line. The string is printed only when the status of at least one job
 changes. The characters used in the string are:
 
-. = job ready to run
-w = dependent job waiting for its parent to complete
-R = job running
-* = job completed with return code 0
-? = job completed with non-zero return code
+ . = job ready to run
+ w = dependent job waiting for its parent to complete
+ R = job running
+ * = job completed with return code 0
+ ? = job completed with non-zero return code
 
 When all jobs are terminated, the program writes two integer numbers to 
 standard output, separated by a tab: the total number of jobs executed,
