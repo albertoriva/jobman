@@ -22,14 +22,24 @@ def countPlus(s):
             return np
 
 class TimedObject(object):
-    _start_time = 0
-    _end_time = 0
+    """An object that keeps track of elapsed time between two events. Use the
+start() method to start the timer, end() to stop it, and elapsed() to return
+the number of seconds between the start and end events (or None if start() and/or
+end() were not called)."""
+    _start_time = None
+    _end_time = None
 
     def start(self):
         self._start_time = datetime.now()
 
     def end(self):
         self._end_time = datetime.now()
+
+    def elapsed(self):
+        if self._start_time and self._end_time:
+            return (self._end_time - self._start_time).total_seconds()
+        else:
+            return None
     
 class Job(TimedObject):
     name = ""
@@ -50,8 +60,9 @@ class Job(TimedObject):
         self.status = status
         self.dependents = []
 
-    def start(self):
+    def startJob(self):
         self.proc = sp.Popen(self.cmdline, shell=True)
+        self.start()
         self.pid = self.proc.pid
         self.status = "running"
         return self.pid
@@ -60,6 +71,7 @@ class Job(TimedObject):
         r = self.proc.poll()
         if r is None:
             return False
+        self.end()
         self.retcode = r
         if r == 0:
             self.status = "done"
@@ -67,12 +79,13 @@ class Job(TimedObject):
             self.status = "nonzero"
         return True
     
-class JobMan(object):
+class JobMan(TimedObject):
     jobs = []
     delay = 5
     maxjobs = 0
     jobmap = True
     filenames = []
+    reportFile = None
     _njobs = 0
     _nrunning = 0
     _ndone = 0
@@ -98,6 +111,7 @@ or from standard input, if no file argument is specified. Options:
 
  -d D | Poll proocesses every D seconds (default: {}).
  -m M | Run at most M concurrent processes (default: no limit).
+ -r R | Write a full report to file F after all jobs terminate.
  -q   | Do not display job map while running (see below).
  -l   | Enable logging (to standard error).
 
@@ -138,6 +152,13 @@ $ jobman jobs.txt
 $ echo $?
 3
 
+In addition, the user can request a full report with the -r option. The report
+is a tab-delimited file with one line for each job and three columns:
+
+  - Job number (starting at 1)
+  - Return code
+  - Job duration in seconds.
+
 (c) 2019, Alberto Riva.
 
 """.format(self.delay))
@@ -154,11 +175,14 @@ $ echo $?
             elif prev == "-m":
                 self.maxjobs = int(a)
                 prev = ""
+            elif prev == "-r":
+                self.reportFile = a
+                prev = ""
             elif a == "-l":
                 self._log = True
             elif a == "-v":
                 self.jobmap = True
-            elif a in ["-d", "-m"]:
+            elif a in ["-d", "-m", "-r"]:
                 prev = a
             else:
                 if os.path.isfile(a):
@@ -224,11 +248,11 @@ $ echo $?
         return self.maxjobs == 0 or self._nrunning < self.maxjobs
 
     def startJob(self, job):
-        job.start()
+        job.startJob()
         self._nrunning += 1
         
     def run(self):
-        self._start_time = datetime.now()
+        self.start()
         while True:
             # Check if any running jobs are done
             for j in self.jobs:
@@ -261,9 +285,16 @@ $ echo $?
                 break
 
             time.sleep(self.delay)
-        self._end_time = datetime.now()
-        
+        self.end()
+
     def report(self):
+        with open(self.reportFile, "w") as out:
+            n = 1
+            for j in self.jobs:
+                out.write("{}\t{}\t{}\n".format(n, j.retcode, j.elapsed()))
+                n += 1
+        
+    def summary(self):
         nzero = 0
         maxret = 0
         for j in self.jobs:
@@ -271,8 +302,7 @@ $ echo $?
                 nzero += 1
             elif j.retcode > maxret:
                 maxret = j.retcode
-        secs = (self._end_time - self._start_time).total_seconds()
-        sys.stdout.write("{}\t{}\t{}\n".format(self._njobs, nzero, secs))
+        sys.stdout.write("{}\t{}\t{}\n".format(self._njobs, nzero, self.elapsed()))
         sys.exit(maxret)
         
 def test():
@@ -291,5 +321,8 @@ if __name__ == "__main__":
         JM.initialize()
         # JM.showJobs()
         JM.run()
-        JM.report()
+        if JM.reportFile:
+            JM.report()
+        JM.summary()
+        
     

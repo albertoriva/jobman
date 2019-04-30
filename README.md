@@ -17,6 +17,7 @@ Option     | Meaning
 -h, --help | Print help message
 -d D       | Poll processes every D seconds (default: 5).
 -m M       | At most M jobs can run concurrently (default: no limit).
+-r R       | Write report to file R.
 -q         | Do not display job map while running (see below).
 -l         | Enable logging (to standard error).
 
@@ -69,3 +70,11 @@ $ jobman jobs.txt
 $ echo $?
 3
 ```
+
+In addition, the user can request a full report with the -r option. The report
+is a tab-delimited file with one line for each job and three columns:
+
+  - Job number (starting at 1)
+  - Return code
+  - Job duration in seconds.
+  
