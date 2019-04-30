@@ -86,6 +86,7 @@ class JobMan(TimedObject):
     jobmap = True
     filenames = []
     reportFile = None
+    reRunFile = None
     _njobs = 0
     _nrunning = 0
     _ndone = 0
@@ -112,6 +113,7 @@ or from standard input, if no file argument is specified. Options:
  -d D | Poll proocesses every D seconds (default: {}).
  -m M | Run at most M concurrent processes (default: no limit).
  -r R | Write a full report to file F after all jobs terminate.
+ -u U | Write failed commands to file U, so they can be re-run.
  -q   | Do not display job map while running (see below).
  -l   | Enable logging (to standard error).
 
@@ -178,11 +180,14 @@ is a tab-delimited file with one line for each job and three columns:
             elif prev == "-r":
                 self.reportFile = a
                 prev = ""
+            elif prev == "-u":
+                self.reRunFile = a
+                prev = ""
             elif a == "-l":
                 self._log = True
             elif a == "-v":
                 self.jobmap = True
-            elif a in ["-d", "-m", "-r"]:
+            elif a in ["-d", "-m", "-r", "-u"]:
                 prev = a
             else:
                 if os.path.isfile(a):
@@ -293,7 +298,13 @@ is a tab-delimited file with one line for each job and three columns:
             for j in self.jobs:
                 out.write("{}\t{}\t{}\n".format(n, j.retcode, j.elapsed()))
                 n += 1
-        
+
+    def writeReRun(self):
+        with open(self.reRunFile, "w") as out:
+            for j in self.jobs:
+                if j.retcode != 0:
+                    out.write("{}\n\n".format(j.cmdline))
+                
     def summary(self):
         nzero = 0
         maxret = 0
@@ -323,6 +334,8 @@ if __name__ == "__main__":
         JM.run()
         if JM.reportFile:
             JM.report()
+        if JM.reRunFile:
+            JM.writeReRun()
         JM.summary()
         
     

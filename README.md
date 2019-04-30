@@ -2,7 +2,14 @@
 Minimal job manager
 
 Jobman is a simple program to run several commands concurrently. The
-commands can be read from one or more files or from standard input.
+commands can be read from one or more files or from standard input. It
+has the following features:
+
+- Allows controlling the maximum number of processes that can run at the same time;
+- Provides a visual display of running, waiting, and completed processes;
+- Jobs can be dependent on other jobs;
+- Keeps track of which jobs terminated successfully and which ones didn't;
+- Generates a full report containing job results and execution times.
 
 ## Usage:
 
@@ -21,6 +28,15 @@ Option     | Meaning
 -q         | Do not display job map while running (see below).
 -l         | Enable logging (to standard error).
 
+## Job definition
+
+A job definition file contains commands to be executed in parallel. Each
+command should fit on a single line (you can use ; to concatenate multiple
+commands into a single job). Empty lines and lines starting with # are
+ignored. If multiple filenames are listed on the jobman command line, the
+program will execute all commands contained in them, as if the files were
+concatenated.
+
 ## Dependent jobs
 
 Each command line can be preceded by one or more '+' characters (up to 20),
@@ -37,6 +53,9 @@ cmd4
 
 cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
 cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
+
+Note that a job can only depend on a job that appears in the same job definition
+file.
 
 ## Job map
 
@@ -71,10 +90,16 @@ $ echo $?
 3
 ```
 
-In addition, the user can request a full report with the -r option. The report
+## Reports
+
+The user can request a full report with the -r option. The report
 is a tab-delimited file with one line for each job and three columns:
 
   - Job number (starting at 1)
   - Return code
   - Job duration in seconds.
-  
+
+Additionally, the program can write the commands that were unsuccessful (ie,
+had a non-zero return code) to a new job definition file, allowing the failed
+commands to be re-run. This is accomplished with the -u option, followed by
+the name of the new job definition file.
