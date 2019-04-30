@@ -20,8 +20,18 @@ def countPlus(s):
             np += 1
         else:
             return np
-        
-class Job(object):
+
+class TimedObject(object):
+    _start_time = 0
+    _end_time = 0
+
+    def start(self):
+        self._start_time = datetime.now()
+
+    def end(self):
+        self._end_time = datetime.now()
+    
+class Job(TimedObject):
     name = ""
     proc = None
     pid = None
