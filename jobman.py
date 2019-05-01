@@ -102,7 +102,7 @@ class JobMan(TimedObject):
         self._ndone = 0
 
     def usage(self):
-        sys.stderr.write("""jobman.py - Simple job manager
+        sys.stdout.write("""jobman.py - Simple job manager
 
 Usage: jobman.py [options] [filenames...]
 

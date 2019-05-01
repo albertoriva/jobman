@@ -103,3 +103,72 @@ Additionally, the program can write the commands that were unsuccessful (ie,
 had a non-zero return code) to a new job definition file, allowing the failed
 commands to be re-run. This is accomplished with the -u option, followed by
 the name of the new job definition file.
+
+## Limitations
+
+Contrary to real schedulers like Slurm or PBS, Jobman has no way of knowing how
+much memory a job will require. It is up to the user to ensure that the number
+of concurrent processes is not large enough to exhaust the available memory.
+
+## Example
+
+Assume the file test.jobs contains the following:
+
+```
+sleep 10
++sleep 20
+++sleep 10; exit 1
++sleep 15
+
+sleep 10; exit 3
++sleep 20
+```
+
+Then:
+
+```
+$ ./jobman.py -d 10 -r report.txt -u failed.txt test.jobs
+RwwwRw
+*RwR?R
+**R*?*
+**?*?*
+6	4	50.047388
+```
+
+This shows that of the six processes, four completed successfully and
+two had a non-zero error code. Executing took 50 seconds. The report.txt
+file now contains:
+
+```
+1	0	20.020379
+2	0	20.014182
+3	1	10.010128
+4	0	20.013337
+5	3	20.0196
+6	0	20.01253
+```
+
+and the failed.txt file contains:
+
+```
+sleep 10; exit 1
+
+sleep 10; exit 3
+```
+
+The -u option can be used to automatically re-run failed jobs. For example,
+assume that each job in the file badjobs.txt has a 10% chance of failing. The
+following code will re-run failed jobs until all are successful:
+
+```bash
+cp badjobs.txt to-run.txt
+while 1;
+do
+  jobman.py -u failed.txt to-run.txt
+  if [ "$?" == 0 ];
+  then
+    break
+  fi
+  cp failed.txt to-run.txt
+done
+```
