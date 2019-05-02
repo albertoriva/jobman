@@ -136,8 +136,8 @@ RwwwRw
 ```
 
 This shows that of the six processes, four completed successfully and
-two had a non-zero error code. Executing took 50 seconds. The report.txt
-file now contains:
+two had a non-zero error code. Execution of all commands took 50 seconds. 
+The report.txt file now contains:
 
 ```
 1	0	20.020379
