@@ -128,12 +128,12 @@ sleep 10; exit 3
 Then:
 
 ```
-$ ./jobman.py -d 10 -r report.txt -u failed.txt test.jobs
+$ ./jobman.py -d 2 -r report.txt -u failed.txt test.jobs
 RwwwRw
-*RwR?R
-**R*?*
-**?*?*
-6	4	50.047388
+*RwR!R
+**R*!*
+**!*!*
+6	4	40.047388
 ```
 
 This shows that of the six processes, four completed successfully and
@@ -156,6 +156,20 @@ sleep 10; exit 1
 
 sleep 10; exit 3
 ```
+
+If the -x option is supplied, the output instead is:
+
+```
+$ ./jobman.py -d 2 -r report.txt -u failed.txt test.jobs
+RwwwRw
+*RwR!?
+*Rw*!?
+**R*!?
+**!*!?
+6	4	40.325167
+```
+indicating that job #6 did not run, since its parent (job #5) returned
+a non-zero return code.
 
 The -u option can be used to automatically re-run failed jobs. For example,
 assume that each job in the file badjobs.txt has a 10% chance of failing. The
