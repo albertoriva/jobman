@@ -111,6 +111,14 @@ Contrary to real schedulers like Slurm or PBS, Jobman has no way of knowing how
 much memory a job will require. It is up to the user to ensure that the number
 of concurrent processes is not large enough to exhaust the available memory.
 
+Jobman has no way of knowing that a process is done until it checks it, and it
+polls processes every D seconds (where D is 60 by default and can be changed
+with the -d option). This means that the job duration reported in the report
+file (-r option) and the overall one provided at the end of execution will always
+be multiples of D. For example, if D is 10 seconds and job execution takes one
+second, its duration will still be reported as 10 seconds. To avoid this, make D
+much smaller than the expected duration of the fastest process.
+
 ## Example
 
 Assume the file test.jobs contains the following:
@@ -141,12 +149,12 @@ two had a non-zero error code. Execution of all commands took 40 seconds.
 The report.txt file now contains:
 
 ```
-1	0	20.020379
-2	0	20.014182
-3	1	10.010128
-4	0	20.013337
-5	3	20.0196
-6	0	20.01253
+1       0       10.013428
+2       0       20.027645
+3       1       10.009108
+4       0       16.02026
+5       3       10.011195
+6       0       20.022374
 ```
 
 and the failed.txt file contains:
