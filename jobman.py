@@ -8,7 +8,7 @@ from datetime import datetime
 
 # Globals
 
-PROCESS_SYM = {"held": 'w', "ready": '.', "running": 'R', "done": '*', "nonzero": '?'}
+PROCESS_SYM = {"held": 'w', "ready": '.', "running": 'R', "done": '*', "nonzero": '!', "invalid": '?'}
 
 # Utils
 
@@ -87,6 +87,7 @@ class JobMan(TimedObject):
     filenames = []
     reportFile = None
     reRunFile = None
+    strictMode = False
     _njobs = 0
     _nrunning = 0
     _ndone = 0
@@ -114,6 +115,7 @@ or from standard input, if no file argument is specified. Options:
  -m M | Run at most M concurrent processes (default: no limit).
  -r R | Write a full report to file F after all jobs terminate.
  -u U | Write failed commands to file U, so they can be re-run.
+ -x   | Enable strict mode: children of failed jobs won't run.
  -q   | Do not display job map while running (see below).
  -l   | Enable logging (to standard error).
 
@@ -140,7 +142,8 @@ changes. The characters used in the string are:
  w = dependent job waiting for its parent to complete
  R = job running
  * = job completed with return code 0
- ? = job completed with non-zero return code
+ ! = job completed with non-zero return code
+ ? = job invalidated because its parent had non-zero return code
 
 When all jobs are terminated, the program writes three numbers to standard 
 output, separated by a tab: the total number of jobs executed, the number 
@@ -187,6 +190,8 @@ is a tab-delimited file with one line for each job and three columns:
                 self._log = True
             elif a == "-v":
                 self.jobmap = True
+            elif a == "-x":
+                self.strictMode = True
             elif a in ["-d", "-m", "-r", "-u"]:
                 prev = a
             else:
@@ -255,6 +260,14 @@ is a tab-delimited file with one line for each job and three columns:
     def startJob(self, job):
         job.startJob()
         self._nrunning += 1
+
+    def invalidateChildren(self, job):
+        """Mark all dependents of `job' as invalid (recursively)."""
+        for j in job.dependents:
+            self.log("Job #{} invalidated.", j.name)
+            j.status = "invalid"
+            self._ndone += 1
+            self.invalidateChildren(j)
         
     def run(self):
         self.start()
@@ -263,13 +276,17 @@ is a tab-delimited file with one line for each job and three columns:
             for j in self.jobs:
                 # self.log("Checking job #{}, {}", j.name, j.status)
                 if j.status == "running" and j.check():
-                    self.log("Job #{} terminated.", j.name)
+                    self.log("Job #{} terminated, status={}.", j.name, j.retcode)
                     self._nrunning += -1
                     self._ndone += 1
                     self.log("Jobs running: {}", self._nrunning)
-                    for dep in j.dependents:
-                        dep.status = "ready"
-                        self.log("Job #{} now ready.", dep.name)
+                    if j.retcode != 0 and self.strictMode:
+                        self.log("Invalidating children of job #{}", j.name)
+                        self.invalidateChildren(j)
+                    else:
+                        for dep in j.dependents:
+                            dep.status = "ready"
+                            self.log("Job #{} now ready.", dep.name)
 
             # Check if we have room to start new jobs and
             # that we have new jobs that can be started

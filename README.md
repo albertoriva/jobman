@@ -67,11 +67,12 @@ changes. The characters used in the string are are:
 
 Char | Meaning
 -----|--------
- . | job ready to run
- w | dependent job waiting for its parent to complete
- R | job running
- &ast; | job completed with return code 0
- ? | job completed with non-zero return code
+ . | job ready to run.
+ w | dependent job waiting for its parent to complete.
+ R | job running.
+ &ast; | job completed with return code 0.
+ ! | job completed with non-zero return code.
+ ? | Job invalidated because its parent had non-zero return code.
 
 
 ## Return values
