@@ -127,11 +127,11 @@ be multiples of D. For example, if D is 10 seconds and job execution takes two
 seconds, its duration will still be reported as 10 seconds. To avoid this, make D
 much smaller than the expected duration of the fastest process.
 
-## Example
+## Examples
 
 Assume the file test.jobs contains the following:
 
-```bash
+```
 sleep 10
 +sleep 20
 ++sleep 10; exit 1
@@ -143,7 +143,7 @@ sleep 10; exit 3
 
 Then:
 
-```bash
+```
 $ ./jobman.py -d 2 -r report.txt -u failed.txt test.jobs
 RwwwRw
 *RwR!R
@@ -167,7 +167,7 @@ The report.txt file now contains:
 
 and the failed.txt file contains:
 
-```bash
+```
 sleep 10; exit 1
 
 sleep 10; exit 3
