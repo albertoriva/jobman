@@ -1,14 +1,16 @@
-# jobman
-Minimal job manager
+# Jobman - Minimal job manager
 
-Jobman is a simple program to run several commands concurrently. The
-commands can be read from one or more files or from standard input. It
-has the following features:
+Jobman is a simple program to run several commands concurrently. It can
+be used as a replacement for full-featured schedulers such as Slurm or PBS,
+when you want to run multiple processes on a single node with multiple cores.
 
+Jobman offers the following features:
+
+- Commands to be executed can be read from one or more files, or from standard input;
 - Allows controlling the maximum number of processes that can run at the same time;
 - Provides a visual display of running, waiting, and completed processes;
 - Jobs can be dependent on other jobs;
-- Keeps track of which jobs terminated successfully and which ones didn't;
+- Keeps track of which jobs terminated successfully and which ones didn't (based on the job's return code);
 - Generates a full report containing job results and execution times.
 
 ## Usage:
@@ -31,8 +33,9 @@ Option     | Meaning
 ## Job definition
 
 A job definition file contains commands to be executed in parallel. Each
-command should fit on a single line (you can use ; to concatenate multiple
-commands into a single job). Empty lines and lines starting with # are
+command should fit on a single line, and should do no I/O operations. You 
+can use ; to concatenate multiple commands into a single job, and redirection
+operators (< and >). Empty lines and lines starting with # are
 ignored. If multiple filenames are listed on the jobman command line, the
 program will execute all commands contained in them, as if the files were
 concatenated.
@@ -41,7 +44,7 @@ concatenated.
 
 Each command line can be preceded by one or more '+' characters (up to 20),
 indicating that the corresponding job should be executed after a previous 
-one (its parent) has terminated. For example, given the following commands:
+one, its parent, has terminated. For example, given the following commands:
 
 ```
 cmd1
@@ -51,8 +54,13 @@ cmd4
 +cmd5
 ```
 
-cmd1 and cmd4 will be executed immediately, cmd2 will be executed after cmd1, 
-cmd5 will be executed after cmd4, and cmd3 will be executed after cmd3.
+cmd1 and cmd4 will start immediately, cmd2 will be executed after cmd1, 
+cmd3 will be executed after cmd2, and cmd5 will be executed after cmd4.
+
+By default, a dependent job will run after its parent terminates regardless 
+of the parent's exit status. If the -x option is specified, instead, a dependent
+job will only run if its parent returned a 0 exit status. This can be used
+to prevent dependent jobs from running if their parent failed.
 
 Note that a job can only depend on a job that appears in the same job definition
 file.
@@ -111,19 +119,19 @@ Contrary to real schedulers like Slurm or PBS, Jobman has no way of knowing how
 much memory a job will require. It is up to the user to ensure that the number
 of concurrent processes is not large enough to exhaust the available memory.
 
-Jobman has no way of knowing that a process is done until it checks it, and it
-polls processes every D seconds (where D is 60 by default and can be changed
+Jobman can only find out that a process is done when it checks it, and this 
+happens every D seconds (where D is 60 by default and can be changed
 with the -d option). This means that the job duration reported in the report
 file (-r option) and the overall one provided at the end of execution will always
-be multiples of D. For example, if D is 10 seconds and job execution takes one
-second, its duration will still be reported as 10 seconds. To avoid this, make D
+be multiples of D. For example, if D is 10 seconds and job execution takes two
+seconds, its duration will still be reported as 10 seconds. To avoid this, make D
 much smaller than the expected duration of the fastest process.
 
 ## Example
 
 Assume the file test.jobs contains the following:
 
-```
+```bash
 sleep 10
 +sleep 20
 ++sleep 10; exit 1
@@ -135,7 +143,7 @@ sleep 10; exit 3
 
 Then:
 
-```
+```bash
 $ ./jobman.py -d 2 -r report.txt -u failed.txt test.jobs
 RwwwRw
 *RwR!R
@@ -159,15 +167,15 @@ The report.txt file now contains:
 
 and the failed.txt file contains:
 
-```
+```bash
 sleep 10; exit 1
 
 sleep 10; exit 3
 ```
 
-If the -x option is supplied, the output instead is:
+If the -x option is supplied, the output instead would be:
 
-```
+```bash
 $ ./jobman.py -d 2 -r report.txt -u failed.txt test.jobs
 RwwwRw
 *RwR!?
@@ -180,7 +188,7 @@ indicating that job #6 did not run, since its parent (job #5) returned
 a non-zero return code.
 
 The -u option can be used to automatically re-run failed jobs. For example,
-assume that each job in the file badjobs.txt has a 10% chance of failing. The
+assume that each job in the file badjobs.txt has a small chance of failing. The
 following code will re-run failed jobs until all are successful:
 
 ```bash
